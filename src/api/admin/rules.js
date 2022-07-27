@@ -24,7 +24,7 @@ export function editMenu(params) {
   })
 }
 
-export function deleteMenu(params) {
+export function delrules(params) {
   return request({
     url: '/admin/delrules',
     method: 'post',

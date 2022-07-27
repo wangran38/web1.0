@@ -1,5 +1,35 @@
 <template>
   <div class="app-container">
+
+    <div class="filter-container">
+      <el-input v-model="listQuery.title" placeholder="Title" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
+      <!-- <el-select v-model="listQuery.importance" placeholder="Imp" clearable style="width: 90px" class="filter-item">
+        <el-option v-for="item in importanceOptions" :key="item" :label="item" :value="item" />
+      </el-select> -->
+      <!-- <el-select v-model="listQuery.type" placeholder="Type" clearable class="filter-item" style="width: 130px">
+        <el-option v-for="item in calendarTypeOptions" :key="item.key" :label="item.display_name+'('+item.key+')'" :value="item.key" />
+      </el-select> -->
+      <!-- <el-select v-model="listQuery.sort" style="width: 140px" class="filter-item" @change="handleFilter">
+        <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
+      </el-select> -->
+      <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+        查找
+      </el-button>
+      <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="resetData">
+        清空
+      </el-button>
+      <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
+       添加菜单
+      </el-button>
+      <!--<el-button v-waves :loading="downloadLoading" class="filter-item" type="primary" icon="el-icon-download" @click="handleDownload">
+      下载表格
+      </el-button>-->
+      <!--<el-checkbox v-model="showReviewer" class="filter-item" style="margin-left:15px;" @change="tableKey=tableKey+1">
+        展开列表
+      </el-checkbox>-->
+      <br/> <br/>
+    </div>
+
     <el-table
       :key="tableKey"
       v-loading="listLoading"
@@ -9,7 +39,7 @@
       highlight-current-row
       style="width: 100%;"
     >
-      <el-table-column label="父级id" width="80px" align="center">
+      <el-table-column label="id" width="80px" align="center">
         <template slot-scope="{row}" >
           <span>{{ row.id }}</span>
         </template>
@@ -70,6 +100,22 @@
         </template>
       </el-table-column>
 
+      <el-table-column label="操作" align="center" width="230" class-name="small-padding fixed-width">
+        <template slot-scope="{row,$index}">
+          <el-button type="primary" size="mini" @click="handleUpdate(row)">
+            修改
+          </el-button>
+          <!--<el-button v-if="row.status!='published'" size="mini" type="success" @click="handleModifyStatus(row,'published')">
+            详细
+          </el-button>-->
+          <!--<el-button v-if="row.status!='draft'" size="mini" @click="handleModifyStatus(row,'draft')">
+            Draft
+          </el-button>-->
+          <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row,$index)">
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
 
 
 
@@ -83,12 +129,15 @@
 </template>
 <script>
 	//引入teacher.js文件
-	import { getlist } from '@/api/admin/rules'  //.js可以省略
+	import { getlist, delrules } from '@/api/admin/rules'  //.js可以省略
+  import Pagination from '@/components/Pagination' // secondary package based on el-pagination
 import waves from '@/directive/waves' // waves directive 点击水波纹
 import { parseTime } from '@/utils'
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+
 	//核心代码
 	export default{
+  components: { Pagination }, //分页
+  directives: { waves }, //点击水波纹
 		// data:{
 			
 		// },  或使用下面的写法
@@ -99,7 +148,7 @@ import Pagination from '@/components/Pagination' // secondary package based on e
 			list:null,  //接收接口返回的数据
       listLoading: true,
       listQuery: {
-        limit: 20,
+        limit: 10,
         page: 1,
         importance: undefined,
         title: undefined,
@@ -129,10 +178,32 @@ import Pagination from '@/components/Pagination' // secondary package based on e
 			//清空条件，并查询所有
 			resetData(){
 				//清空表单数据
-				this.teacherQuery = {};
+				this.listQuery = {
+        limit: 10,
+        page: 1,
+        importance: undefined,
+        title: undefined,
+        type: undefined,
+        sort: '+id'
+        };
 				//空条件查询、
 				this.getList()
-			}
+			},
+      handleFilter() {
+      this.listQuery.page = 1
+      this.getList()
+      },
+      handleDelete(row, index) {
+        
+      this.$notify({
+        title: 'Success',
+        message: 'Delete Successfully',
+        type: 'success',
+        duration: 2000
+      })
+      this.list.splice(index, 1)
+    },
+
 		}
 	}
 </script>
@@ -140,49 +211,4 @@ import Pagination from '@/components/Pagination' // secondary package based on e
 <style>
 </style>
 
-<!-- <script>
-	//引入teacher.js文件
-	import getlist from '@/api/admin/rules'  //.js可以省略
-	//核心代码
-	export default{
-		// data:{
-			
-		// },  或使用下面的写法
-		data(){  
-			return{
-      // tableKey: 0,
-			list:null,  //接收接口返回的数据
-      total: 0,
-      listLoading: true,
-      listQuery: {
-        limit: 10,
-        page: 1,
-        title: undefined,
-      }
-			}
-		},
-		created(){  //页面渲染之前执行，一般用于调用methods中定义的方法
-			this.getList();
-		},
-		methods:{  //定义具体的方法，调用teacher.js中的方法
-    getList() {
-      this.listLoading = true
-      getlist(this.listQuery).then(response=>{
-					console.log(response);
-					this.list = response.data.listdata;
-					this.total = response.data.totalnum;
-				}).catch(error=>{
-					console.log(error);
-				})
-    },
-			//清空条件，并查询所有
-			// resetData(){
-			// 	//清空表单数据
-			// 	this.listQuery = {};
-			// 	//空条件查询、
-			// 	this.getList()
-			// }
-		}
-	}
-</script> -->
 
